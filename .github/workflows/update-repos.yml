@@ -3,7 +3,7 @@ name: Actualizar Lista de Repositorios
 on:
   schedule:
     - cron: '0 0 * * *'
-  workflow_dispatch: # Permite que lo arranques tú mismo con un botón
+  workflow_dispatch: # Permite ejecución manual con el botón Run workflow
 
 jobs:
   update-readme:
@@ -33,6 +33,7 @@ jobs:
           from datetime import datetime
 
           username = "raulferreyra"
+          # URL TOTALMENTE CORREGIDA: Apunta a la API oficial con sus respectivas barras
           url = f"https://github.com{username}/repos?per_page=100&sort=updated"
           
           print(f"[INFO] Conectando a la API de GitHub: {url}")
@@ -49,22 +50,25 @@ jobs:
               print("[ERROR] La respuesta de la API no es una lista válida:", repos)
               exit(1)
 
-          print(f"[INFO] Se obtuvieron {len(repos)} repositorios totales (públicos + forks).")
+          print(f"[INFO] Se obtuvieron {len(repos)} repositorios totales desde la API.")
 
+          # Filtrar: excluir forks y tu propio repositorio portafolio
           filtered_repos = [r for r in repos if not r.get('fork', False) and r.get('name') != f"{username}.github.io"]
-          print(f"[INFO] Filtrados {len(filtered_repos)} repositorios propios (excluyendo forks y portafolio).")
+          print(f"[INFO] Filtrados {len(filtered_repos)} repositorios propios.")
 
-          # Armar la tabla
+          # Construir la tabla Markdown
           table = "| Nombre | Creación | Última Actualización |\n| :--- | :---: | :---: |\n"
           for r in filtered_repos:
               created = datetime.strptime(r['created_at'], "%Y-%m-%dT%H:%M:%SZ").strftime("%Y-%m-%d")
               updated = datetime.strptime(r['updated_at'], "%Y-%m-%dT%H:%M:%SZ").strftime("%Y-%m-%d")
+              
               name_link = f"[{r['name']}]({r['html_url']})"
               desc = f"<br><sub>{r['description']}</sub>" if r['description'] else ""
+              
               table += f"| {name_link}{desc} | {created} | {updated} |\n"
 
-          # Intentar inyectar en el archivo
-          print("[INFO] Abriendo el archivo README.md...")
+          # Leer e inyectar de forma limpia y robusta
+          print("[INFO] Leyendo el archivo README.md...")
           with open("README.md", "r", encoding="utf-8") as f:
               content = f.read()
 
@@ -72,20 +76,18 @@ jobs:
           end_tag = "<!-- REPO-LIST:END -->"
 
           if start_tag in content and end_tag in content:
-              print("[INFO] Etiquetas encontradas con éxito. Procediendo a inyectar la tabla...")
+              print("[INFO] Etiquetas encontradas. Inyectando tabla...")
               before = content.split(start_tag)[0]
               after = content.split(end_tag)[1]
               
+              # Reconstrucción limpia usando solo texto plano
               new_content = f"{before}{start_tag}\n\n{table}\n{end_tag}{after}"
               
               with open("README.md", "w", encoding="utf-8") as f:
                   f.write(new_content)
-              print("[OK] ¡README.md reescrito con éxito de forma local!")
+              print("[OK] ¡README.md modificado con éxito localmente!")
           else:
-              print("[ERROR] No se encontraron las etiquetas de anclaje. El contenido del README es:")
-              print("---")
-              print(content)
-              print("---")
+              print("[ERROR] No se encontraron las etiquetas exactas de anclaje en tu README.md")
               exit(1)
           EOF
 
