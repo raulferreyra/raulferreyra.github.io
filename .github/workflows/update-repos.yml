@@ -72,40 +72,47 @@ jobs:
           table_pics = ""
           if os.path.exists(base_folder):
               print(f"[INFO] Escaneando subcarpetas en '{base_folder}'...")
+              
+              # Obtenemos y ordenamos las carpetas de forma limpia
               subfolders = sorted([f for f in os.listdir(base_folder) if os.path.isdir(os.path.join(base_folder, f))])
               
               columns = 3
+              # Inicializa el encabezado de la tabla Markdown de 3 columnas
               table_pics = "| " * columns + "|\n" + "| :---: " * columns + "|\n"
               row_cells = []
               
               for folder in subfolders: 
-                folder_path = os.path.join(base_folder, folder)
-                images = [img for img in os.listdir(folder_path) if img.lower().endswith(('.webp', '.png', '.jpg', '.jpeg'))]
-
-                safe_base_folder = quote(base_folder)
-                safe_folder = quote(folder)
-    
-                folder_url = f"https://github.com/{username}/{repo_name}/tree/main/{safe_base_folder}/{safe_folder}"
-                clean_title = folder.replace("(", " (")
-
-                if images:
-                  cover_image = sorted(images)[0]
-                  safe_image = quote(cover_image)
+                  folder_path = os.path.join(base_folder, folder)
+                  # Filtramos los formatos aceptados
+                  images = [img for img in os.listdir(folder_path) if img.lower().endswith(('.webp', '.png', '.jpg', '.jpeg'))]
+          
+                  safe_base_folder = quote(base_folder)
+                  safe_folder = quote(folder)
                   
-                  # Corrección del dominio Raw de GitHub y sus diagonales
-                  img_url = f"https://githubusercontent.com/{username}/{repo_name}/main/{safe_base_folder}/{safe_folder}/{safe_image}"
-                  
-                  cell = f"<a href='{folder_url}'><img src='{img_url}' width='200' alt='{folder}'><br><sub><b>{clean_title}</b></sub></a>"
-                  row_cells.append(cell)
-              else:
-                  cell = f"<a href='{folder_url}'><br>📁 <sub><b>{clean_title}</b></sub><br>(Sin imágenes)</a>"
-                  row_cells.append(cell)
-                
-
+                  # URL oficial del directorio en GitHub para el enlace interactivo
+                  folder_url = f"https://github.com{username}/{repo_name}/tree/main/{safe_base_folder}/{safe_folder}"
+                  clean_title = folder.replace("(", " (")
+          
+                  if images:
+                      # Selecciona la primera imagen alfabéticamente como portada
+                      cover_image = sorted(images)[0]
+                      safe_image = quote(cover_image)
+                      
+                      # URL RAW CORRECTA: Se añade '://githubusercontent.com' y la rama estándar '/refs/heads/main/'
+                      img_url = f"https://://githubusercontent.com/{username}/{repo_name}/refs/heads/main/{safe_base_folder}/{safe_folder}/{safe_image}"
+                      
+                      cell = f"<a href='{folder_url}'><img src='{img_url}' width='200' alt='{folder}'><br><sub><b>{clean_title}</b></sub></a>"
+                      row_cells.append(cell)
+                  else:
+                      # Si una carpeta está totalmente vacía de imágenes, muestra el ícono de carpeta
+                      cell = f"<a href='{folder_url}'><br>📁 <sub><b>{clean_title}</b></sub><br>(Sin imágenes)</a>"
+                      row_cells.append(cell)
+                      
+              # Genera la grilla de filas dividiendo los elementos de 3 en 3 de forma exacta
               for i in range(0, len(row_cells), columns):
                   chunk = row_cells[i:i+columns]
                   while len(chunk) < columns:
-                      chunk.append("")
+                      chunk.append("")  # Rellena celdas vacías si el total no es múltiplo de 3
                   table_pics += "| " + " | ".join(chunk) + " |\n"
 
           # ==========================================
