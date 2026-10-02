@@ -34,7 +34,7 @@ jobs:
 
           username = "raulferreyra"
           # URL OFICIAL DE LA API VERIFICADA
-          url = f"https://github.com/{username}/repos?per_page=100&sort=updated"
+          url = f"https://api.github.com/users/{username}/repos?per_page=100&sort=updated"
           
           print(f"[INFO] Conectando a la API de GitHub: {url}")
           
