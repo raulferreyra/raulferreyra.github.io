@@ -1,4 +1,4 @@
-name: Actualizar Lista de Repositorios
+name: Actualizar Lista de Repositorios y Portafolio
 
 on:
   schedule:
@@ -23,7 +23,7 @@ jobs:
       - name: Instalar dependencias
         run: pip install requests
 
-      - name: Generar tabla de repositorios
+      - name: Generar tablas de Markdown
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -32,75 +32,133 @@ jobs:
           import requests
           from datetime import datetime
 
+          # ==========================================
+          # PARTE 1: ACTUALIZACIÓN DE REPOSITORIOS (RAÍZ)
+          # ==========================================
           username = "raulferreyra"
-          # URL OFICIAL DE LA API VERIFICADA
           url = f"https://api.github.com/users/{username}/repos?per_page=100&sort=updated"
           
           print(f"[INFO] Conectando a la API de GitHub: {url}")
-          
           headers = {}
           if os.environ.get('GITHUB_TOKEN'):
               headers["Authorization"] = f"token {os.environ['GITHUB_TOKEN']}"
-              print("[INFO] Token de autenticación cargado correctamente.")
 
           response = requests.get(url, headers=headers)
           
-          # Verificar si la respuesta de red fue exitosa antes de procesar el JSON
-          if response.status_code != 200:
-              print(f"[ERROR] La API de GitHub respondió con código {response.status_code}")
-              print("Contenido de la respuesta:", response.text)
-              exit(1)
-
-          repos = response.json()
-
-          if not isinstance(repos, list):
-              print("[ERROR] La respuesta de la API no es una lista válida:", repos)
-              exit(1)
-
-          print(f"[INFO] Se obtuvieron {len(repos)} repositorios totales desde la API.")
-
-          # Filtrar: excluir forks y tu propio repositorio portafolio
-          filtered_repos = [r for r in repos if not r.get('fork', False) and r.get('name') != f"{username}.github.io"]
-          print(f"[INFO] Filtrados {len(filtered_repos)} repositorios propios.")
-
-          # Construir la tabla Markdown
-          table = "| Nombre | Creación | Última Actualización |\n| :--- | :---: | :---: |\n"
-          for r in filtered_repos:
-              created = datetime.strptime(r['created_at'], "%Y-%m-%dT%H:%M:%SZ").strftime("%Y-%m-%d")
-              updated = datetime.strptime(r['updated_at'], "%Y-%m-%dT%H:%M:%SZ").strftime("%Y-%m-%d")
+          if response.status_code == 200:
+              repos = response.json()
+              filtered_repos = [r for r in repos if not r.get('fork', False) and r.get('name') != f"{username}.github.io"]
               
-              name_link = f"[{r['name']}]({r['html_url']})"
-              desc = f"<br><sub>{r['description']}</sub>" if r['description'] else ""
-              
-              table += f"| {name_link}{desc} | {created} | {updated} |\n"
+              table_repos = "| Nombre | Creación | Última Actualización |\n| :--- | :---: | :---: |\n"
+              for r in filtered_repos:
+                  created = datetime.strptime(r['created_at'], "%Y-%m-%dT%H:%M:%SZ").strftime("%Y-%m-%d")
+                  updated = datetime.strptime(r['updated_at'], "%Y-%m-%dT%H:%M:%SZ").strftime("%Y-%m-%d")
+                  name_link = f"[{r['name']}]({r['html_url']})"
+                  desc = f"<br><sub>{r['description']}</sub>" if r['description'] else ""
+                  table_repos += f"| {name_link}{desc} | {created} | {updated} |\n"
 
-          # Leer e inyectar en el README
-          print("[INFO] Leyendo el archivo README.md...")
-          with open("README.md", "r", encoding="utf-8") as f:
-              content = f.read()
-
-          start_tag = "<!-- REPO-LIST:START -->"
-          end_tag = "<!-- REPO-LIST:END -->"
-
-          if start_tag in content and end_tag in content:
-              print("[INFO] Etiquetas encontradas. Inyectando tabla...")
-              
-              # Dividir el archivo de manera limpia usando las etiquetas como cortes de texto plano
-              before = content.split(start_tag)[0]
-              after = content.split(end_tag)[1]
-              
-              # Reconstrucción del archivo uniendo los bloques de texto correctamente
-              new_content = f"{before}{start_tag}\n\n{table}\n{end_tag}{after}"
-              
-              with open("README.md", "w", encoding="utf-8") as f:
-                  f.write(new_content)
-              print("[OK] ¡README.md modificado con éxito localmente!")
+              if os.path.exists("README.md"):
+                  with open("README.md", "r", encoding="utf-8") as f:
+                      content_raiz = f.read()
+                  
+                  start_tag = "<!-- REPO-LIST:START -->"
+                  end_tag = "<!-- REPO-LIST:END -->"
+                  
+                  if start_tag in content_raiz and end_tag in content_raiz:
+                      before = content_raiz.split(start_tag)[0]
+                      after = content_raiz.split(end_tag)[1]
+                      new_content = f"{before}{start_tag}\n\n{table_repos}\n{end_tag}{after}"
+                      with open("README.md", "w", encoding="utf-8") as f:
+                          f.write(new_content)
+                      print("[OK] ¡README.md de la raíz actualizado!")
           else:
-              print("[ERROR] No se encontraron las etiquetas exactas de anclaje en tu README.md")
-              exit(1)
+              print(f"[ERROR] Código {response.status_code} al consultar repositorios.")
+
+          # ==========================================
+          # PARTE 2: ESCANEO DE CARPETA PORTAFOLIO E IMÁGENES WEBP
+          # ==========================================
+          # Nombre del repositorio principal para las rutas relativas de las imágenes
+          repo_name = f"{username}.github.io"
+          base_folder = "portafolio"
+          
+          if os.path.exists(base_folder):
+              print(f"[INFO] Escaneando subcarpetas en '{base_folder}'...")
+              
+              # Obtener subcarpetas ordenadas de forma alfabética/cronológica
+              subfolders = sorted([f for f in os.listdir(base_folder) if os.path.isdir(os.path.join(base_folder, f))])
+              
+              # Configuración de columnas para la tabla (3 proyectos por fila queda muy estético)
+              columns = 3
+              table_pics = "| " * columns + "|\n" + "| :---: " * columns + "|\n"
+              
+              row_cells = []
+              for folder in subfolders:
+                  folder_path = os.path.join(base_folder, folder)
+                  
+                  # Buscar la primera imagen .webp de cada carpeta para usarla de portada
+                  images = [img for img in os.listdir(folder_path) if img.lower().endswith('.webp')]
+                  
+                  if images:
+                      # Usamos la primera imagen encontrada
+                      cover_image = sorted(images)[0]
+                      
+                      # Construimos la URL cruda de GitHub para que la imagen cargue perfectamente donde sea
+                      img_url = f"https://githubusercontent.com{username}/{repo_name}/main/{base_folder}/{folder}/{cover_image}"
+                      
+                      # El enlace llevará al usuario a ver el contenido de la carpeta de ese proyecto en Github
+                      folder_url = f"https://github.com/{username}/{repo_name}/tree/main/{base_folder}/{folder}"
+                      
+                      # Celda formateada en HTML para centrar, redimensionar la imagen y poner un título limpio
+                      # Limpiamos el nombre de la carpeta quitando el año para el título visual si lo deseas, o lo dejamos completo:
+                      clean_title = folder.replace("(", " (") # Mejora espaciado visual
+                      
+                      cell = f"<a href='{folder_url}'><img src='{img_url}' width='200' alt='{folder}'><br><sub><b>{clean_title}</b></sub></a>"
+                      row_cells.append(cell)
+                  else:
+                      # Si la carpeta está vacía o no tiene .webp aún, ponemos un marcador sin imagen
+                      folder_url = f"https://github.com/{username}/{repo_name}/tree/main/{base_folder}/{folder}"
+                      cell = f"<a href='{folder_url}'><br>📁 <sub><b>{folder}</b></sub><br>(Sin imágenes .webp)</a>"
+                      row_cells.append(cell)
+
+              # Organizar las celdas recolectadas en filas de la tabla Markdown
+              for i in range(0, len(row_cells), columns):
+                  chunk = row_cells[i:i+columns]
+                  # Rellenar con celdas vacías si la última fila no se completa
+                  while len(chunk) < columns:
+                      chunk.append("")
+                  table_pics += "| " + " | ".join(chunk) + " |\n"
+
+              # Inyectar la tabla en portafolio/README.md
+              portafolio_md_path = os.path.join(base_folder, "README.md")
+              if os.path.exists(portafolio_md_path):
+                  print(f"[INFO] Leyendo {portafolio_md_path}...")
+                  with open(portafolio_md_path, "r", encoding="utf-8") as f:
+                      portafolio_content = f.read()
+                  
+                  pic_start = "<!-- REPO-PICTURES:START -->"
+                  pic_end = "<!-- REPO-PICTURES:END -->"
+                  
+                  if pic_start in portafolio_content and pic_end in portafolio_content:
+                      before_pic = portafolio_content.split(pic_start)[0]
+                      after_pic = portafolio_content.split(pic_end)[1]
+                      
+                      new_portafolio_content = f"{before_pic}{pic_start}\n\n{table_pics}\n{pic_end}{after_pic}"
+                      
+                      with open(portafolio_md_path, "w", encoding="utf-8") as f:
+                          f.write(new_portafolio_content)
+                      print("[OK] ¡portafolio/README.md modificado con éxito!")
+                  else:
+                      print("[ERROR] No se encontraron las etiquetas REPO-PICTURES en portafolio/README.md")
+              else:
+                  print(f"[WARN] No se encontró el archivo {portafolio_md_path}, procediendo a crearlo.")
+                  # Si no existe, lo crea con las etiquetas para la próxima ejecución
+                  with open(portafolio_md_path, "w", encoding="utf-8") as f:
+                      f.write(f"# Mi Portafolio\n\n{pic_start}\n\n{table_pics}\n{pic_end}")
+          else:
+              print("[ERROR] La carpeta 'portafolio' no existe en la raíz del repositorio.")
           EOF
 
       - name: Auto-confirmar y guardar cambios
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "Bot: Lista de repositorios públicos actualizada automáticamente"
+          commit_message: "Bot: Tablas de repositorios e imágenes actualizadas automáticamente"
