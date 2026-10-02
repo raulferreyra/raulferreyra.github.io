@@ -90,7 +90,7 @@ jobs:
                   safe_folder = quote(folder)
                   
                   # URL oficial del directorio en GitHub para el enlace interactivo
-                  folder_url = f"https://github.com{username}/{repo_name}/tree/main/{safe_base_folder}/{safe_folder}"
+                  folder_url = f"https://github.com/{username}/{repo_name}/tree/main/{safe_base_folder}/{safe_folder}"
                   clean_title = folder.replace("(", " (")
           
                   if images:
