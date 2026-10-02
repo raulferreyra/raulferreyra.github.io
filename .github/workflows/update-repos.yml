@@ -77,27 +77,29 @@ jobs:
               row_cells = []
               
               for folder in subfolders:
-                  folder_path = os.path.join(base_folder, folder)
-                  images = [img for img in os.listdir(folder_path) if img.lower().endswith('.webp')]
-                  
-                  folder_url = f"https://github.com{username}/{repo_name}/tree/main/{base_folder}/{folder}"
-                  clean_title = folder.replace("(", " (")
-                  
-                  if images:
-                      # CORRECCIÓN: Extraemos el primer elemento string [0] de la lista ordenada de imágenes
-                      cover_image = sorted(images)[0]
-                      
-                      # Reemplazamos espacios en blanco por %20 para que la URL cruda no se rompa en navegadores
-                      safe_folder = folder.replace(" ", "%20")
-                      safe_image = cover_image.replace(" ", "%20")
-                      
-                      img_url = f"https://githubusercontent.com{username}/{repo_name}/main/{base_folder}/{safe_folder}/{safe_image}"
-                      
-                      cell = f"<a href='{folder_url}'><img src='{img_url}' width='200' alt='{folder}'><br><sub><b>{clean_title}</b></sub></a>"
-                      row_cells.append(cell)
-                  else:
-                      cell = f"<a href='{folder_url}'><br>📁 <sub><b>{clean_title}</b></sub><br>(Sin imágenes)</a>"
-                      row_cells.append(cell)
+                folder_path = os.path.join(base_folder, folder)
+                images = [img for img in os.listdir(folder_path) if img.lower().endswith(('.webp', '.png', '.jpg', '.jpeg'))]
+                
+                # 1. Aseguramos las barras '/' en las URLs base
+                # 2. Usamos quote() para encodear caracteres especiales como ( ) y espacios
+                safe_base_folder = quote(base_folder)
+                safe_folder = quote(folder)
+                
+                folder_url = f"https://github.com/{username}/{repo_name}/tree/main/{safe_base_folder}/{safe_folder}"
+                clean_title = folder.replace("(", " (")
+                
+                if images:
+                    cover_image = sorted(images)[0]
+                    safe_image = quote(cover_image)
+                    
+                    # Corrección del dominio Raw de GitHub y sus diagonales
+                    img_url = f"https://githubusercontent.com/{username}/{repo_name}/main/{safe_base_folder}/{safe_folder}/{safe_image}"
+                    
+                    cell = f"<a href='{folder_url}'><img src='{img_url}' width='200' alt='{folder}'><br><sub><b>{clean_title}</b></sub></a>"
+                    row_cells.append(cell)
+                else:
+                    cell = f"<a href='{folder_url}'><br>📁 <sub><b>{clean_title}</b></sub><br>(Sin imágenes)</a>"
+                    row_cells.append(cell)
 
               for i in range(0, len(row_cells), columns):
                   chunk = row_cells[i:i+columns]
