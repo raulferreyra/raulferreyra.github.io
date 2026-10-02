@@ -30,6 +30,8 @@ jobs:
           python - << 'EOF'
           import os
           import requests
+          from urllib.parse import quote
+          
           from datetime import datetime
 
           username = "raulferreyra"
