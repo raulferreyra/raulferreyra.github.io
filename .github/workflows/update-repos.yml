@@ -3,7 +3,7 @@ name: Actualizar Lista de Repositorios
 on:
   schedule:
     - cron: '0 0 * * *'
-  workflow_dispatch: # Permite ejecución manual rápida
+  workflow_dispatch: # Permite que lo arranques tú mismo con un botón
 
 jobs:
   update-readme:
@@ -33,36 +33,38 @@ jobs:
           from datetime import datetime
 
           username = "raulferreyra"
-          # URL CORRECTA utilizando el endpoint oficial de la API de GitHub
-          url = f"https://github.com/{username}/repos?per_page=100&sort=updated"
+          url = f"https://github.com{username}/repos?per_page=100&sort=updated"
+          
+          print(f"[INFO] Conectando a la API de GitHub: {url}")
           
           headers = {}
           if os.environ.get('GITHUB_TOKEN'):
               headers["Authorization"] = f"token {os.environ['GITHUB_TOKEN']}"
+              print("[INFO] Token de autenticación cargado correctamente.")
 
           response = requests.get(url, headers=headers)
           repos = response.json()
 
-          # Validar que la respuesta sea una lista válida
           if not isinstance(repos, list):
-              print("Error al consultar la API de GitHub. Respuesta recibida:", repos)
+              print("[ERROR] La respuesta de la API no es una lista válida:", repos)
               exit(1)
 
-          # Filtrar: excluir forks y el propio repositorio del portafolio
-          filtered_repos = [r for r in repos if not r.get('fork', False) and r.get('name') != f"{username}.github.io"]
+          print(f"[INFO] Se obtuvieron {len(repos)} repositorios totales (públicos + forks).")
 
-          # Construir la tabla Markdown
+          filtered_repos = [r for r in repos if not r.get('fork', False) and r.get('name') != f"{username}.github.io"]
+          print(f"[INFO] Filtrados {len(filtered_repos)} repositorios propios (excluyendo forks y portafolio).")
+
+          # Armar la tabla
           table = "| Nombre | Creación | Última Actualización |\n| :--- | :---: | :---: |\n"
           for r in filtered_repos:
               created = datetime.strptime(r['created_at'], "%Y-%m-%dT%H:%M:%SZ").strftime("%Y-%m-%d")
               updated = datetime.strptime(r['updated_at'], "%Y-%m-%dT%H:%M:%SZ").strftime("%Y-%m-%d")
-              
               name_link = f"[{r['name']}]({r['html_url']})"
               desc = f"<br><sub>{r['description']}</sub>" if r['description'] else ""
-              
               table += f"| {name_link}{desc} | {created} | {updated} |\n"
 
-          # Leer e inyectar en el README
+          # Intentar inyectar en el archivo
+          print("[INFO] Abriendo el archivo README.md...")
           with open("README.md", "r", encoding="utf-8") as f:
               content = f.read()
 
@@ -70,17 +72,20 @@ jobs:
           end_tag = "<!-- REPO-LIST:END -->"
 
           if start_tag in content and end_tag in content:
+              print("[INFO] Etiquetas encontradas con éxito. Procediendo a inyectar la tabla...")
               before = content.split(start_tag)[0]
               after = content.split(end_tag)[1]
               
-              # Reconstrucción limpia del archivo utilizando los delimitadores
               new_content = f"{before}{start_tag}\n\n{table}\n{end_tag}{after}"
               
               with open("README.md", "w", encoding="utf-8") as f:
                   f.write(new_content)
-              print("README.md actualizado con éxito localmente.")
+              print("[OK] ¡README.md reescrito con éxito de forma local!")
           else:
-              print("Error: No se encontraron las etiquetas de anclaje exactas en el README.md")
+              print("[ERROR] No se encontraron las etiquetas de anclaje. El contenido del README es:")
+              print("---")
+              print(content)
+              print("---")
               exit(1)
           EOF
 
