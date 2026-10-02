@@ -25,3 +25,6 @@ This is my Public Portofolio, I have not permissions for the private projects.
 | [smias](https://github.com/raulferreyra/smias)<br><sub>Super Metropolitano IA System</sub> | 2024-08-15 | 2024-08-16 |
 
 <!-- REPO-LIST:END -->
+
+<!-- REPO-PICTURES:START -->
+<!-- REPO-PICTURES:END -->
