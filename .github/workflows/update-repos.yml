@@ -79,7 +79,7 @@ jobs:
           # ==========================================
           # Nombre del repositorio principal para las rutas relativas de las imágenes
           repo_name = f"{username}.github.io"
-          base_folder = "portafolio"
+          base_folder = "portofolio"
           
           if os.path.exists(base_folder):
               print(f"[INFO] Escaneando subcarpetas en '{base_folder}'...")
