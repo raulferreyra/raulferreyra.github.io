@@ -103,10 +103,6 @@ jobs:
                       
                       cell = f"<a href='{folder_url}'><img src='{img_url}' width='200' alt='{folder}'><br><sub><b>{clean_title}</b></sub></a>"
                       row_cells.append(cell)
-                  else:
-                      # Si una carpeta está totalmente vacía de imágenes, muestra el ícono de carpeta
-                      cell = f"<a href='{folder_url}'><br>📁 <sub><b>{clean_title}</b></sub><br>(Sin imágenes)</a>"
-                      row_cells.append(cell)
                       
               # Genera la grilla de filas dividiendo los elementos de 3 en 3 de forma exacta
               for i in range(0, len(row_cells), columns):
