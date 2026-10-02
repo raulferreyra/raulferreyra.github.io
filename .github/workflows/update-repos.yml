@@ -75,19 +75,16 @@ jobs:
               print(f"[ERROR] Código {response.status_code} al consultar repositorios.")
 
           # ==========================================
-          # PARTE 2: ESCANEO DE CARPETA PORTAFOLIO E IMÁGENES WEBP
+          # PARTE 2: ESCANEO DE CARPETA PORTOFOLIO E IMÁGENES WEBP
           # ==========================================
-          # Nombre del repositorio principal para las rutas relativas de las imágenes
           repo_name = f"{username}.github.io"
           base_folder = "portofolio"
           
           if os.path.exists(base_folder):
               print(f"[INFO] Escaneando subcarpetas en '{base_folder}'...")
               
-              # Obtener subcarpetas ordenadas de forma alfabética/cronológica
               subfolders = sorted([f for f in os.listdir(base_folder) if os.path.isdir(os.path.join(base_folder, f))])
               
-              # Configuración de columnas para la tabla (3 proyectos por fila queda muy estético)
               columns = 3
               table_pics = "| " * columns + "|\n" + "| :---: " * columns + "|\n"
               
@@ -95,48 +92,37 @@ jobs:
               for folder in subfolders:
                   folder_path = os.path.join(base_folder, folder)
                   
-                  # Buscar la primera imagen .webp de cada carpeta para usarla de portada
                   images = [img for img in os.listdir(folder_path) if img.lower().endswith('.webp')]
                   
                   if images:
-                      # Usamos la primera imagen encontrada
                       cover_image = sorted(images)[0]
-                      
-                      # Construimos la URL cruda de GitHub para que la imagen cargue perfectamente donde sea
                       img_url = f"https://githubusercontent.com{username}/{repo_name}/main/{base_folder}/{folder}/{cover_image}"
-                      
-                      # El enlace llevará al usuario a ver el contenido de la carpeta de ese proyecto en Github
                       folder_url = f"https://github.com/{username}/{repo_name}/tree/main/{base_folder}/{folder}"
                       
-                      # Celda formateada en HTML para centrar, redimensionar la imagen y poner un título limpio
-                      # Limpiamos el nombre de la carpeta quitando el año para el título visual si lo deseas, o lo dejamos completo:
-                      clean_title = folder.replace("(", " (") # Mejora espaciado visual
+                      clean_title = folder.replace("(", " (")
                       
                       cell = f"<a href='{folder_url}'><img src='{img_url}' width='200' alt='{folder}'><br><sub><b>{clean_title}</b></sub></a>"
                       row_cells.append(cell)
                   else:
-                      # Si la carpeta está vacía o no tiene .webp aún, ponemos un marcador sin imagen
                       folder_url = f"https://github.com/{username}/{repo_name}/tree/main/{base_folder}/{folder}"
                       cell = f"<a href='{folder_url}'><br>📁 <sub><b>{folder}</b></sub><br>(Sin imágenes .webp)</a>"
                       row_cells.append(cell)
 
-              # Organizar las celdas recolectadas en filas de la tabla Markdown
               for i in range(0, len(row_cells), columns):
                   chunk = row_cells[i:i+columns]
-                  # Rellenar con celdas vacías si la última fila no se completa
                   while len(chunk) < columns:
                       chunk.append("")
                   table_pics += "| " + " | ".join(chunk) + " |\n"
 
-              # Inyectar la tabla en portafolio/README.md
+              # Definición global de marcadores HTML para evitar errores NameError
+              pic_start = "<!-- REPO-PICTURES:START -->"
+              pic_end = "<!-- REPO-PICTURES:END -->"
+
               portafolio_md_path = os.path.join(base_folder, "README.md")
               if os.path.exists(portafolio_md_path):
                   print(f"[INFO] Leyendo {portafolio_md_path}...")
                   with open(portafolio_md_path, "r", encoding="utf-8") as f:
                       portafolio_content = f.read()
-                  
-                  pic_start = "<!-- REPO-PICTURES:START -->"
-                  pic_end = "<!-- REPO-PICTURES:END -->"
                   
                   if pic_start in portafolio_content and pic_end in portafolio_content:
                       before_pic = portafolio_content.split(pic_start)[0]
@@ -146,16 +132,15 @@ jobs:
                       
                       with open(portafolio_md_path, "w", encoding="utf-8") as f:
                           f.write(new_portafolio_content)
-                      print("[OK] ¡portafolio/README.md modificado con éxito!")
+                      print("[OK] ¡portofolio/README.md modificado con éxito!")
                   else:
-                      print("[ERROR] No se encontraron las etiquetas REPO-PICTURES en portafolio/README.md")
+                      print("[ERROR] No se encontraron las etiquetas REPO-PICTURES en portofolio/README.md")
               else:
-                  print(f"[WARN] No se encontró el archivo {portafolio_md_path}, procediendo a crearlo.")
-                  # Si no existe, lo crea con las etiquetas para la próxima ejecución
+                  print(f"[WARN] No se encontró el archivo {portafolio_md_path}, procediendo a crearlo de forma correcta.")
                   with open(portafolio_md_path, "w", encoding="utf-8") as f:
-                      f.write(f"# Mi Portafolio\n\n{pic_start}\n\n{table_pics}\n{pic_end}")
+                      f.write(f"# Mi Portafolio Visual\n\n{pic_start}\n\n{table_pics}\n{pic_end}")
           else:
-              print("[ERROR] La carpeta 'portafolio' no existe en la raíz del repositorio.")
+              print("[ERROR] La carpeta 'portofolio' no existe en la raíz del repositorio.")
           EOF
 
       - name: Auto-confirmar y guardar cambios
