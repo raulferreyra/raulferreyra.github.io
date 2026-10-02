@@ -2,9 +2,8 @@ name: Actualizar Lista de Repositorios
 
 on:
   schedule:
-    # Se ejecuta automáticamente todos los días a la medianoche (UTC)
     - cron: '0 0 * * *'
-  workflow_dispatch: # Te permite ejecutarlo manualmente cuando quieras
+  workflow_dispatch: # Permite ejecución manual rápida
 
 jobs:
   update-readme:
@@ -33,32 +32,36 @@ jobs:
           import requests
           from datetime import datetime
 
-          # Configuración
           username = "raulferreyra"
           url = f"https://github.com{username}/repos?per_page=100&sort=updated"
-          headers = {"Authorization": f"token {os.environ['GITHUB_TOKEN']}"} if os.environ.get('GITHUB_TOKEN') else {}
+          headers = {}
+          
+          if os.environ.get('GITHUB_TOKEN'):
+              headers["Authorization"] = f"token {os.environ['GITHUB_TOKEN']}"
 
           response = requests.get(url, headers=headers)
           repos = response.json()
 
-          # Filtrar repositorios (excluir el propio portafolio si se desea y forks)
-          filtered_repos = [r for r in repos if not r['fork'] and r['name'] != f"{username}.github.io"]
+          # Validar que la respuesta sea una lista y no un error de la API
+          if not isinstance(repos, list):
+              print("Error al consultar la API de GitHub:", repos)
+              exit(1)
 
-          # Crear la tabla en formato Markdown
+          # Filtrar: excluir forks y el propio repositorio de la página
+          filtered_repos = [r for r in repos if not r.get('fork', False) and r.get('name') != f"{username}.github.io"]
+
+          # Construir la tabla Markdown
           table = "| Nombre | Creación | Última Actualización |\n| :--- | :---: | :---: |\n"
-          
           for r in filtered_repos:
-              # Formatear fechas a YYYY-MM-DD
               created = datetime.strptime(r['created_at'], "%Y-%m-%dT%H:%M:%SZ").strftime("%Y-%m-%d")
               updated = datetime.strptime(r['updated_at'], "%Y-%m-%dT%H:%M:%SZ").strftime("%Y-%m-%d")
               
               name_link = f"[{r['name']}]({r['html_url']})"
-              # Si el repo tiene descripción, puedes sumarla abajo del nombre opcionalmente
               desc = f"<br><sub>{r['description']}</sub>" if r['description'] else ""
               
               table += f"| {name_link}{desc} | {created} | {updated} |\n"
 
-          # Leer README actual e inyectar la tabla
+          # Leer e inyectar de forma robusta
           with open("README.md", "r", encoding="utf-8") as f:
               content = f.read()
 
@@ -66,15 +69,22 @@ jobs:
           end_tag = "<!-- REPO-LIST:END -->"
 
           if start_tag in content and end_tag in content:
+              # Dividir el archivo usando las etiquetas como pivotes
               before = content.split(start_tag)[0]
               after = content.split(end_tag)[1]
+              
+              # Reconstruir el archivo uniendo las piezas de forma limpia
               new_content = f"{before}{start_tag}\n\n{table}\n{end_tag}{after}"
               
               with open("README.md", "w", encoding="utf-8") as f:
                   f.write(new_content)
+              print("README.md modificado con éxito localmente.")
+          else:
+              print("Error: No se encontraron las etiquetas de anclaje en el README.md")
+              exit(1)
           EOF
 
-      - name: Auto-confirmar y guardar cambios en el repositorio
+      - name: Auto-confirmar y guardar cambios
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "Bot: Lista de repositorios públicos actualizada automáticamente"
