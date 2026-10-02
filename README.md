@@ -26,5 +26,6 @@ This is my Public Portofolio, I have not permissions for the private projects.
 
 <!-- REPO-LIST:END -->
 
+## Images of completed projects
 <!-- REPO-PICTURES:START -->
 <!-- REPO-PICTURES:END -->
