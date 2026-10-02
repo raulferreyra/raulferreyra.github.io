@@ -1,0 +1,80 @@
+name: Actualizar Lista de Repositorios
+
+on:
+  schedule:
+    # Se ejecuta automáticamente todos los días a la medianoche (UTC)
+    - cron: '0 0 * * *'
+  workflow_dispatch: # Te permite ejecutarlo manualmente cuando quieras
+
+jobs:
+  update-readme:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Clonar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Instalar dependencias
+        run: pip install requests
+
+      - name: Generar tabla de repositorios
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python - << 'EOF'
+          import os
+          import requests
+          from datetime import datetime
+
+          # Configuración
+          username = "raulferreyra"
+          url = f"https://github.com{username}/repos?per_page=100&sort=updated"
+          headers = {"Authorization": f"token {os.environ['GITHUB_TOKEN']}"} if os.environ.get('GITHUB_TOKEN') else {}
+
+          response = requests.get(url, headers=headers)
+          repos = response.json()
+
+          # Filtrar repositorios (excluir el propio portafolio si se desea y forks)
+          filtered_repos = [r for r in repos if not r['fork'] and r['name'] != f"{username}.github.io"]
+
+          # Crear la tabla en formato Markdown
+          table = "| Nombre | Creación | Última Actualización |\n| :--- | :---: | :---: |\n"
+          
+          for r in filtered_repos:
+              # Formatear fechas a YYYY-MM-DD
+              created = datetime.strptime(r['created_at'], "%Y-%m-%dT%H:%M:%SZ").strftime("%Y-%m-%d")
+              updated = datetime.strptime(r['updated_at'], "%Y-%m-%dT%H:%M:%SZ").strftime("%Y-%m-%d")
+              
+              name_link = f"[{r['name']}]({r['html_url']})"
+              # Si el repo tiene descripción, puedes sumarla abajo del nombre opcionalmente
+              desc = f"<br><sub>{r['description']}</sub>" if r['description'] else ""
+              
+              table += f"| {name_link}{desc} | {created} | {updated} |\n"
+
+          # Leer README actual e inyectar la tabla
+          with open("README.md", "r", encoding="utf-8") as f:
+              content = f.read()
+
+          start_tag = "<!-- REPO-LIST:START -->"
+          end_tag = "<!-- REPO-LIST:END -->"
+
+          if start_tag in content and end_tag in content:
+              before = content.split(start_tag)[0]
+              after = content.split(end_tag)[1]
+              new_content = f"{before}{start_tag}\n\n{table}\n{end_tag}{after}"
+              
+              with open("README.md", "w", encoding="utf-8") as f:
+                  f.write(new_content)
+          EOF
+
+      - name: Auto-confirmar y guardar cambios en el repositorio
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Bot: Lista de repositorios públicos actualizada automáticamente"
