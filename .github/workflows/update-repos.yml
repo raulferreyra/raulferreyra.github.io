@@ -40,7 +40,7 @@ jobs:
           # ==========================================
           # PARTE 1: GENERACIÓN DE LA TABLA DE REPOSITORIOS
           # ==========================================
-          url = f"https://github.com{username}/repos?per_page=100&sort=updated"
+          url = f"https://api.github.com/users/{username}/repos?per_page=100&sort=updated"
           print(f"[INFO] Conectando a la API de GitHub: {url}")
           
           headers = {}
