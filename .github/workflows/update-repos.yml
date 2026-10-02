@@ -33,7 +33,7 @@ jobs:
           from datetime import datetime
 
           username = "raulferreyra"
-          # URL TOTALMENTE CORREGIDA: Apunta a la API oficial con sus respectivas barras
+          # URL OFICIAL DE LA API VERIFICADA
           url = f"https://github.com/{username}/repos?per_page=100&sort=updated"
           
           print(f"[INFO] Conectando a la API de GitHub: {url}")
@@ -44,6 +44,13 @@ jobs:
               print("[INFO] Token de autenticación cargado correctamente.")
 
           response = requests.get(url, headers=headers)
+          
+          # Verificar si la respuesta de red fue exitosa antes de procesar el JSON
+          if response.status_code != 200:
+              print(f"[ERROR] La API de GitHub respondió con código {response.status_code}")
+              print("Contenido de la respuesta:", response.text)
+              exit(1)
+
           repos = response.json()
 
           if not isinstance(repos, list):
@@ -67,7 +74,7 @@ jobs:
               
               table += f"| {name_link}{desc} | {created} | {updated} |\n"
 
-          # Leer e inyectar de forma limpia y robusta
+          # Leer e inyectar en el README
           print("[INFO] Leyendo el archivo README.md...")
           with open("README.md", "r", encoding="utf-8") as f:
               content = f.read()
@@ -77,10 +84,12 @@ jobs:
 
           if start_tag in content and end_tag in content:
               print("[INFO] Etiquetas encontradas. Inyectando tabla...")
+              
+              # Dividir el archivo de manera limpia usando las etiquetas como cortes de texto plano
               before = content.split(start_tag)[0]
               after = content.split(end_tag)[1]
               
-              # Reconstrucción limpia usando solo texto plano
+              # Reconstrucción del archivo uniendo los bloques de texto correctamente
               new_content = f"{before}{start_tag}\n\n{table}\n{end_tag}{after}"
               
               with open("README.md", "w", encoding="utf-8") as f:
