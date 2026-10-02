@@ -1,5 +1,5 @@
 # raulferreyra.github.io
-My porto
+This is my Public Portofolio, I have not permissions for the private projects.
 
 <!-- REPO-LIST:START -->
 
